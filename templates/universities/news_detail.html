@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ news.title }} - Агрегатор ВУЗов РФ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-primary me-2">{{ news.university.short_name }}</span>
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>{{ news.author.get_full_name|default:news.author.username }} • 
+                            <i class="fas fa-calendar me-1"></i>{{ news.created_at|date:"d.m.Y H:i" }}
+                        </small>
+                    </div>
+                    
+                    <h1 class="card-title mb-4">{{ news.title }}</h1>
+                    
+                    {% if news.image %}
+                    <div class="mb-4">
+                        <img src="{{ news.image.url }}" alt="{{ news.title }}" class="img-fluid rounded">
+                    </div>
+                    {% endif %}
+                    
+                    <div class="news-content">
+                        {{ news.content|linebreaks }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-university me-2"></i>Об университете
+                    </h5>
+                    <div class="d-flex align-items-center mb-3">
+                        {% if news.university.logo %}
+                            <img src="{{ news.university.logo.url }}" alt="{{ news.university.name }}" 
+                                 class="university-logo me-3">
+                        {% else %}
+                            <div class="university-logo me-3 bg-light d-flex align-items-center justify-content-center">
+                                <i class="fas fa-university text-muted"></i>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h6 class="mb-1">{{ news.university.short_name }}</h6>
+                            <small class="text-muted">{{ news.university.city }}, {{ news.university.region.name }}</small>
+                        </div>
+                    </div>
+                    
+                    <p class="card-text">{{ news.university.description|truncatewords:20 }}</p>
+                    
+                    <div class="d-grid">
+                        <a href="{% url 'universities:university_detail' news.university.id %}" 
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-eye me-2"></i>Подробнее об университете
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>Информация о новости
+                    </h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <strong>Автор:</strong> {{ news.author.get_full_name|default:news.author.username }}
+                        </li>
+                        <li class="mb-2">
+                            <strong>Дата публикации:</strong> {{ news.created_at|date:"d.m.Y H:i" }}
+                        </li>
+                        {% if news.updated_at != news.created_at %}
+                        <li class="mb-2">
+                            <strong>Обновлено:</strong> {{ news.updated_at|date:"d.m.Y H:i" }}
+                        </li>
+                        {% endif %}
+                        <li class="mb-2">
+                            <strong>Университет:</strong> {{ news.university.name }}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'universities:news_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Все новости
+                </a>
+                <a href="{% url 'universities:university_detail' news.university.id %}" class="btn btn-primary">
+                    <i class="fas fa-university me-2"></i>Университет
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

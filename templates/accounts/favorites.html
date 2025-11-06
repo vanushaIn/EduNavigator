@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Избранные университеты - Агрегатор ВУЗов РФ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-heart me-2"></i>Избранные университеты
+            </h1>
+            <p class="text-muted mb-4">
+                Ваши сохраненные университеты для быстрого доступа
+            </p>
+        </div>
+    </div>
+
+    {% if favorites %}
+    <div class="row">
+        {% for favorite in favorites %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card university-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        {% if favorite.university.logo %}
+                            <img src="{{ favorite.university.logo.url }}" alt="{{ favorite.university.name }}" 
+                                 class="university-logo me-3">
+                        {% else %}
+                            <div class="university-logo me-3 bg-light d-flex align-items-center justify-content-center">
+                                <i class="fas fa-university text-muted"></i>
+                            </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">{{ favorite.university.short_name }}</h5>
+                            <small class="text-muted">
+                                <i class="fas fa-map-marker-alt me-1"></i>{{ favorite.university.city }}, {{ favorite.university.region.name }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <p class="card-text">{{ favorite.university.description|truncatewords:20 }}</p>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-{% if favorite.university.is_public %}success{% else %}warning{% endif %} me-2">
+                            {% if favorite.university.is_public %}Государственный{% else %}Частный{% endif %}
+                        </span>
+                        <span class="badge bg-secondary">{{ favorite.university.university_type.name }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="rating-stars">
+                            {% if favorite.university.ratings.exists %}
+                                {% with avg_rating=favorite.university.ratings.all|length %}
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= avg_rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted">Нет оценок</span>
+                            {% endif %}
+                        </div>
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'universities:university_detail' favorite.university.id %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>Подробнее
+                            </a>
+                            <a href="{% url 'accounts:remove_from_favorites' favorite.university.id %}" 
+                               class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-heart-broken me-1"></i>Удалить
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>Добавлено: {{ favorite.created_at|date:"d.m.Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{% url 'universities:university_list' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Добавить еще университеты
+            </a>
+        </div>
+    </div>
+    
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-heart fa-3x text-muted mb-3"></i>
+                    <h4>У вас пока нет избранных университетов</h4>
+                    <p class="text-muted mb-4">
+                        Добавляйте университеты в избранное, чтобы быстро находить их в будущем
+                    </p>
+                    <a href="{% url 'universities:university_list' %}" class="btn btn-primary">
+                        <i class="fas fa-university me-2"></i>Найти университеты
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

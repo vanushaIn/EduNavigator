@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}Сравнение университетов - Агрегатор ВУЗов РФ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-balance-scale me-2"></i>Сравнение университетов
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for university in universities %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if university.logo %}
+                            <img src="{{ university.logo.url }}" alt="{{ university.name }}" 
+                                 class="university-logo mb-3">
+                        {% else %}
+                            <div class="university-logo mx-auto mb-3 bg-light d-flex align-items-center justify-content-center">
+                                <i class="fas fa-university text-muted"></i>
+                            </div>
+                        {% endif %}
+                        <h5 class="card-title">{{ university.short_name }}</h5>
+                        <p class="text-muted">{{ university.city }}, {{ university.region.name }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-{% if university.is_public %}success{% else %}warning{% endif %} me-2">
+                            {% if university.is_public %}Государственный{% else %}Частный{% endif %}
+                        </span>
+                        <span class="badge bg-secondary">{{ university.university_type.name }}</span>
+                    </div>
+                    
+                    <div class="rating-stars text-center mb-3">
+                        {% if university.avg_rating %}
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= university.avg_rating %}
+                                    <i class="fas fa-star"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                            <div class="mt-2">
+                                <strong>{{ university.avg_rating|floatformat:1 }}</strong>
+                                <small class="text-muted">({{ university.ratings_count }} отзывов)</small>
+                            </div>
+                        {% else %}
+                            <span class="text-muted">Нет оценок</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <p><strong>Основан:</strong> {{ university.founded_year }} год</p>
+                        <p><strong>Адрес:</strong> {{ university.address }}</p>
+                        {% if university.website %}
+                            <p><strong>Сайт:</strong> 
+                                <a href="{{ university.website }}" target="_blank" class="text-decoration-none">
+                                    {{ university.website }}
+                                </a>
+                            </p>
+                        {% endif %}
+                        {% if university.email %}
+                            <p><strong>Email:</strong> {{ university.email }}</p>
+                        {% endif %}
+                        {% if university.phone %}
+                            <p><strong>Телефон:</strong> {{ university.phone }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <a href="{% url 'universities:university_detail' university.id %}" 
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-eye me-2"></i>Подробнее
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Сравнительная таблица -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="mb-4">
+                <i class="fas fa-table me-2"></i>Сравнительная таблица
+            </h3>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Параметр</th>
+                            {% for university in universities %}
+                            <th class="text-center">{{ university.short_name }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Название</strong></td>
+                            {% for university in universities %}
+                            <td>{{ university.name }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>Город</strong></td>
+                            {% for university in universities %}
+                            <td>{{ university.city }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>Регион</strong></td>
+                            {% for university in universities %}
+                            <td>{{ university.region.name }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>Тип</strong></td>
+                            {% for university in universities %}
+                            <td>{{ university.university_type.name }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>Статус</strong></td>
+                            {% for university in universities %}
+                            <td>
+                                <span class="badge bg-{% if university.is_public %}success{% else %}warning{% endif %}">
+                                    {% if university.is_public %}Государственный{% else %}Частный{% endif %}
+                                </span>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>Год основания</strong></td>
+                            {% for university in universities %}
+                            <td>{{ university.founded_year }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>Рейтинг</strong></td>
+                            {% for university in universities %}
+                            <td class="text-center">
+                                {% if university.avg_rating %}
+                                    <div class="rating-stars">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= university.avg_rating %}
+                                                <i class="fas fa-star"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <div>{{ university.avg_rating|floatformat:1 }}</div>
+                                    <small class="text-muted">({{ university.ratings_count }})</small>
+                                {% else %}
+                                    <span class="text-muted">Нет оценок</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>Сайт</strong></td>
+                            {% for university in universities %}
+                            <td>
+                                {% if university.website %}
+                                    <a href="{{ university.website }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{% url 'universities:comparison' %}" class="btn btn-primary">
+                <i class="fas fa-balance-scale me-2"></i>Сравнить другие университеты
+            </a>
+            <a href="{% url 'universities:university_list' %}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-list me-2"></i>Все университеты
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

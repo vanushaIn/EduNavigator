@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}Университеты - Агрегатор ВУЗов РФ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-university me-2"></i>Университеты России
+            </h1>
+        </div>
+    </div>
+
+    <!-- Search and Filter Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="name" class="form-label">Название</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ form.name.value|default:'' }}" placeholder="Поиск по названию">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="region" class="form-label">Регион</label>
+                            <select class="form-select" id="region" name="region">
+                                <option value="">Все регионы</option>
+                                <!-- Здесь будут регионы из базы данных -->
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="university_type" class="form-label">Тип</label>
+                            <select class="form-select" id="university_type" name="university_type">
+                                <option value="">Все типы</option>
+                                <!-- Здесь будут типы из базы данных -->
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="min_rating" class="form-label">Мин. рейтинг</label>
+                            <select class="form-select" id="min_rating" name="min_rating">
+                                <option value="">Любой</option>
+                                <option value="1" {% if form.min_rating.value == 1 %}selected{% endif %}>1+ звезд</option>
+                                <option value="2" {% if form.min_rating.value == 2 %}selected{% endif %}>2+ звезд</option>
+                                <option value="3" {% if form.min_rating.value == 3 %}selected{% endif %}>3+ звезд</option>
+                                <option value="4" {% if form.min_rating.value == 4 %}selected{% endif %}>4+ звезд</option>
+                                <option value="5" {% if form.min_rating.value == 5 %}selected{% endif %}>5 звезд</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search me-1"></i>Поиск
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_public" name="is_public" 
+                                       {% if form.is_public.value %}checked{% endif %}>
+                                <label class="form-check-label" for="is_public">
+                                    Только государственные
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Count -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <p class="text-muted">
+                Найдено университетов: <strong>{{ page_obj.paginator.count }}</strong>
+            </p>
+        </div>
+    </div>
+
+    <!-- Universities Grid -->
+    <div class="row">
+        {% for university in universities %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card university-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        {% if university.logo %}
+                            <img src="{{ university.logo.url }}" alt="{{ university.name }}" 
+                                 class="university-logo me-3">
+                        {% else %}
+                            <div class="university-logo me-3 bg-light d-flex align-items-center justify-content-center">
+                                {% if "медицинский" in university.university_type.name.lower %}
+                                    <i class="fas fa-user-md text-primary"></i>
+                                {% elif "технический" in university.university_type.name.lower or "политехнический" in university.university_type.name.lower %}
+                                    <i class="fas fa-cogs text-info"></i>
+                                {% elif "педагогический" in university.university_type.name.lower %}
+                                    <i class="fas fa-chalkboard-teacher text-success"></i>
+                                {% elif "экономический" in university.university_type.name.lower %}
+                                    <i class="fas fa-chart-line text-warning"></i>
+                                {% elif "аграрный" in university.university_type.name.lower %}
+                                    <i class="fas fa-seedling text-success"></i>
+                                {% elif "военный" in university.university_type.name.lower %}
+                                    <i class="fas fa-shield-alt text-danger"></i>
+                                {% elif "художественный" in university.university_type.name.lower or "культур" in university.university_type.name.lower %}
+                                    <i class="fas fa-palette text-purple"></i>
+                                {% elif "консерватория" in university.university_type.name.lower %}
+                                    <i class="fas fa-music text-purple"></i>
+                                {% else %}
+                                    <i class="fas fa-university text-muted"></i>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">{{ university.short_name }}</h5>
+                            <small class="text-muted">
+                                <i class="fas fa-map-marker-alt me-1"></i>{{ university.city }}, {{ university.region.name }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <p class="card-text">{{ university.description|truncatewords:25 }}</p>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-{% if university.is_public %}success{% else %}warning{% endif %} me-2">
+                            {% if university.is_public %}Государственный{% else %}Частный{% endif %}
+                        </span>
+                        <span class="badge bg-secondary">{{ university.university_type.name }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="rating-stars">
+                            {% if university.avg_rating %}
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= university.avg_rating %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="ms-2">{{ university.avg_rating|floatformat:1 }}</span>
+                                <small class="text-muted">({{ university.ratings_count }})</small>
+                            {% else %}
+                                <span class="text-muted">Нет оценок</span>
+                            {% endif %}
+                        </div>
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'universities:university_detail' university.id %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>Подробнее
+                            </a>
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'universities:rate_university' university.id %}" 
+                                   class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-star me-1"></i>Оценить
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h4>Университеты не найдены</h4>
+                    <p class="text-muted">Попробуйте изменить параметры поиска</p>
+                    <a href="{% url 'universities:university_list' %}" class="btn btn-primary">
+                        <i class="fas fa-refresh me-2"></i>Сбросить фильтры
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="Навигация по страницам">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.name %}&name={{ request.GET.name }}{% endif %}{% if request.GET.region %}&region={{ request.GET.region }}{% endif %}{% if request.GET.university_type %}&university_type={{ request.GET.university_type }}{% endif %}{% if request.GET.is_public %}&is_public={{ request.GET.is_public }}{% endif %}{% if request.GET.min_rating %}&min_rating={{ request.GET.min_rating }}{% endif %}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.name %}&name={{ request.GET.name }}{% endif %}{% if request.GET.region %}&region={{ request.GET.region }}{% endif %}{% if request.GET.university_type %}&university_type={{ request.GET.university_type }}{% endif %}{% if request.GET.is_public %}&is_public={{ request.GET.is_public }}{% endif %}{% if request.GET.min_rating %}&min_rating={{ request.GET.min_rating }}{% endif %}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if request.GET.name %}&name={{ request.GET.name }}{% endif %}{% if request.GET.region %}&region={{ request.GET.region }}{% endif %}{% if request.GET.university_type %}&university_type={{ request.GET.university_type }}{% endif %}{% if request.GET.is_public %}&is_public={{ request.GET.is_public }}{% endif %}{% if request.GET.min_rating %}&min_rating={{ request.GET.min_rating }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.name %}&name={{ request.GET.name }}{% endif %}{% if request.GET.region %}&region={{ request.GET.region }}{% endif %}{% if request.GET.university_type %}&university_type={{ request.GET.university_type }}{% endif %}{% if request.GET.is_public %}&is_public={{ request.GET.is_public }}{% endif %}{% if request.GET.min_rating %}&min_rating={{ request.GET.min_rating }}{% endif %}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.name %}&name={{ request.GET.name }}{% endif %}{% if request.GET.region %}&region={{ request.GET.region }}{% endif %}{% if request.GET.university_type %}&university_type={{ request.GET.university_type }}{% endif %}{% if request.GET.is_public %}&is_public={{ request.GET.is_public }}{% endif %}{% if request.GET.min_rating %}&min_rating={{ request.GET.min_rating }}{% endif %}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

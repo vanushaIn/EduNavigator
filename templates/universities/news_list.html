@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Новости университетов - Агрегатор ВУЗов РФ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-newspaper me-2"></i>Новости университетов
+            </h1>
+            <p class="text-muted mb-4">
+                Последние новости и события из российских университетов
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for news in news %}
+        <div class="col-lg-6 mb-4">
+            <div class="card news-card h-100">
+                <div class="card-body">
+                    <div class="row">
+                        {% if news.image %}
+                        <div class="col-md-4">
+                            <img src="{{ news.image.url }}" alt="{{ news.title }}" 
+                                 class="img-fluid rounded mb-3 mb-md-0">
+                        </div>
+                        <div class="col-md-8">
+                        {% else %}
+                        <div class="col-12">
+                        {% endif %}
+                            <h5 class="card-title">
+                                <a href="{% url 'universities:news_detail' news.id %}" class="text-decoration-none">
+                                    {{ news.title }}
+                                </a>
+                            </h5>
+                            <p class="card-text">{{ news.content|truncatewords:25 }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-university me-1"></i>{{ news.university.short_name }} • 
+                                    <i class="fas fa-user me-1"></i>{{ news.author.get_full_name|default:news.author.username }} • 
+                                    <i class="fas fa-calendar me-1"></i>{{ news.created_at|date:"d.m.Y H:i" }}
+                                </small>
+                                <a href="{% url 'universities:news_detail' news.id %}" class="btn btn-sm btn-outline-primary">
+                                    Читать далее
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
+                    <h4>Пока нет новостей</h4>
+                    <p class="text-muted">Новости университетов появятся здесь</p>
+                    <a href="{% url 'universities:university_list' %}" class="btn btn-primary">
+                        <i class="fas fa-university me-2"></i>Посмотреть университеты
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="Навигация по страницам">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

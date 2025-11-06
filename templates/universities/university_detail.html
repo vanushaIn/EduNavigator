@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ university.name }} - Агрегатор ВУЗов РФ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- University Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3 text-center">
+                            {% if university.logo %}
+                                <img src="{{ university.logo.url }}" alt="{{ university.name }}" 
+                                     class="img-fluid" style="max-height: 150px;">
+                            {% else %}
+                                <div class="bg-light p-5 rounded">
+                                    <i class="fas fa-university fa-3x text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h1 class="mb-2">{{ university.name }}</h1>
+                            <h4 class="text-muted mb-3">{{ university.short_name }}</h4>
+                            
+                            <div class="mb-3">
+                                <span class="badge bg-{% if university.is_public %}success{% else %}warning{% endif %} me-2">
+                                    {% if university.is_public %}Государственный{% else %}Частный{% endif %}
+                                </span>
+                                <span class="badge bg-secondary me-2">{{ university.university_type.name }}</span>
+                                <span class="badge bg-info">{{ university.founded_year }} год</span>
+                            </div>
+                            
+                            <p class="mb-2">
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                {{ university.city }}, {{ university.region.name }}
+                            </p>
+                            <p class="mb-2">
+                                <i class="fas fa-calendar me-2"></i>
+                                Основан в {{ university.founded_year }} году
+                            </p>
+                        </div>
+                        <div class="col-md-3 text-md-end">
+                            <div class="rating-stars mb-3">
+                                {% if rating_stats.avg_rating %}
+                                    <div class="text-center">
+                                        <div style="font-size: 2rem; font-weight: bold; color: var(--warning-color);">
+                                            {{ rating_stats.avg_rating|floatformat:1 }}
+                                        </div>
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= rating_stats.avg_rating %}
+                                                <i class="fas fa-star"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                        <div class="text-muted">
+                                            {{ rating_stats.ratings_count }} отзывов
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center text-muted">
+                                        <div style="font-size: 2rem;">—</div>
+                                        <div>Нет оценок</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                {% if user.is_authenticated %}
+                                    {% if is_favorite %}
+                                        <a href="{% url 'accounts:remove_from_favorites' university.id %}" 
+                                           class="btn btn-outline-danger">
+                                            <i class="fas fa-heart-broken me-2"></i>Удалить из избранного
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'accounts:add_to_favorites' university.id %}" 
+                                           class="btn btn-outline-primary">
+                                            <i class="fas fa-heart me-2"></i>В избранное
+                                        </a>
+                                    {% endif %}
+                                    <a href="{% url 'universities:rate_university' university.id %}" 
+                                       class="btn btn-primary">
+                                        <i class="fas fa-star me-2"></i>Оценить
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'accounts:login' %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-sign-in-alt me-2"></i>Войти для оценки
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- University Info Tabs -->
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="universityTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button">
+                        <i class="fas fa-info-circle me-2"></i>Информация
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="faculties-tab" data-bs-toggle="tab" data-bs-target="#faculties" type="button">
+                        <i class="fas fa-graduation-cap me-2"></i>Факультеты
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="programs-tab" data-bs-toggle="tab" data-bs-target="#programs" type="button">
+                        <i class="fas fa-book me-2"></i>Программы
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button">
+                        <i class="fas fa-comments me-2"></i>Отзывы
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="news-tab" data-bs-toggle="tab" data-bs-target="#news" type="button">
+                        <i class="fas fa-newspaper me-2"></i>Новости
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="universityTabsContent">
+                <!-- Info Tab -->
+                <div class="tab-pane fade show active" id="info" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h4>Описание</h4>
+                                    <p>{{ university.description }}</p>
+                                    
+                                    <h4 class="mt-4">Контактная информация</h4>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Адрес:</strong><br>{{ university.address }}</p>
+                                            {% if university.phone %}
+                                                <p><strong>Телефон:</strong><br>{{ university.phone }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {% if university.email %}
+                                                <p><strong>Email:</strong><br>{{ university.email }}</p>
+                                            {% endif %}
+                                            {% if university.website %}
+                                                <p><strong>Сайт:</strong><br>
+                                                    <a href="{{ university.website }}" target="_blank">{{ university.website }}</a>
+                                                </p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <h4>Документы</h4>
+                                    {% if university.accreditation %}
+                                        <p><strong>Аккредитация:</strong><br>{{ university.accreditation }}</p>
+                                    {% endif %}
+                                    {% if university.license %}
+                                        <p><strong>Лицензия:</strong><br>{{ university.license }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Faculties Tab -->
+                <div class="tab-pane fade" id="faculties" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4>Факультеты</h4>
+                            {% if faculties %}
+                                <div class="row">
+                                    {% for faculty in faculties %}
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h5 class="card-title">{{ faculty.name }}</h5>
+                                                {% if faculty.dean %}
+                                                    <p class="text-muted mb-2">
+                                                        <i class="fas fa-user-tie me-2"></i>Декан: {{ faculty.dean }}
+                                                    </p>
+                                                {% endif %}
+                                                {% if faculty.description %}
+                                                    <p class="card-text">{{ faculty.description|truncatewords:20 }}</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted">Информация о факультетах не предоставлена</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Programs Tab -->
+                <div class="tab-pane fade" id="programs" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4>Образовательные программы</h4>
+                            {% if programs %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Программа</th>
+                                                <th>Факультет</th>
+                                                <th>Уровень</th>
+                                                <th>Срок обучения</th>
+                                                <th>Стоимость</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for program in programs %}
+                                            <tr>
+                                                <td>{{ program.name }}</td>
+                                                <td>{{ program.faculty.name }}</td>
+                                                <td>{{ program.degree_level }}</td>
+                                                <td>{{ program.duration_years }} лет</td>
+                                                <td>
+                                                    {% if program.tuition_fee %}
+                                                        {{ program.tuition_fee|floatformat:0 }} ₽/год
+                                                    {% else %}
+                                                        —
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p class="text-muted">Информация о программах не предоставлена</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reviews Tab -->
+                <div class="tab-pane fade" id="reviews" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4>Отзывы студентов</h4>
+                                {% if user.is_authenticated %}
+                                    <a href="{% url 'universities:rate_university' university.id %}" class="btn btn-primary">
+                                        <i class="fas fa-star me-2"></i>Оставить отзыв
+                                    </a>
+                                {% endif %}
+                            </div>
+                            
+                            {% if ratings %}
+                                {% for rating in ratings %}
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <strong>{{ rating.user.get_full_name|default:rating.user.username }}</strong>
+                                                <div class="rating-stars">
+                                                    {% for i in "12345" %}
+                                                        {% if forloop.counter <= rating.rating %}
+                                                            <i class="fas fa-star"></i>
+                                                        {% else %}
+                                                            <i class="far fa-star"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">{{ rating.created_at|date:"d.m.Y H:i" }}</small>
+                                        </div>
+                                        {% if rating.comment %}
+                                            <p class="mb-0">{{ rating.comment }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                                    <h5>Пока нет отзывов</h5>
+                                    <p class="text-muted">Станьте первым, кто оставит отзыв об этом университете!</p>
+                                    {% if user.is_authenticated %}
+                                        <a href="{% url 'universities:rate_university' university.id %}" class="btn btn-primary">
+                                            <i class="fas fa-star me-2"></i>Оставить отзыв
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- News Tab -->
+                <div class="tab-pane fade" id="news" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4>Новости университета</h4>
+                                {% if user.is_authenticated %}
+                                    <a href="{% url 'universities:create_news' university.id %}" class="btn btn-primary">
+                                        <i class="fas fa-plus me-2"></i>Добавить новость
+                                    </a>
+                                {% endif %}
+                            </div>
+                            
+                            {% if news %}
+                                {% for news_item in news %}
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            {% if news_item.image %}
+                                            <div class="col-md-3">
+                                                <img src="{{ news_item.image.url }}" alt="{{ news_item.title }}" 
+                                                     class="img-fluid rounded">
+                                            </div>
+                                            <div class="col-md-9">
+                                            {% else %}
+                                            <div class="col-12">
+                                            {% endif %}
+                                                <h5 class="card-title">
+                                                    <a href="{% url 'universities:news_detail' news_item.id %}" class="text-decoration-none">
+                                                        {{ news_item.title }}
+                                                    </a>
+                                                </h5>
+                                                <p class="card-text">{{ news_item.content|truncatewords:30 }}</p>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-user me-1"></i>{{ news_item.author.get_full_name|default:news_item.author.username }} • 
+                                                    <i class="fas fa-calendar me-1"></i>{{ news_item.created_at|date:"d.m.Y H:i" }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
+                                    <h5>Пока нет новостей</h5>
+                                    <p class="text-muted">Новости этого университета появятся здесь</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

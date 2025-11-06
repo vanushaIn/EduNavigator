@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Сравнение университетов - Агрегатор ВУЗов РФ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-balance-scale me-2"></i>Сравнение университетов
+            </h1>
+            <p class="text-muted mb-4">
+                Выберите до 5 университетов для детального сравнения по различным параметрам
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-university me-2"></i>Выберите университеты для сравнения
+                            </label>
+                            <div class="row">
+                                {% for university in form.universities %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        {{ university.tag }}
+                                        <label class="form-check-label" for="{{ university.id_for_label }}">
+                                            {{ university.choice_label }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.universities.errors %}
+                                <div class="text-danger">{{ form.universities.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'universities:university_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Назад к списку
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-balance-scale me-2"></i>Сравнить университеты
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>Как работает сравнение
+                    </h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Выберите от 2 до 5 университетов
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Сравните по рейтингам и отзывам
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Изучите программы обучения
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Сравните контактную информацию
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-lightbulb me-2"></i>Советы
+                    </h5>
+                    <p class="card-text">
+                        Для лучшего сравнения выбирайте университеты одного типа или региона.
+                        Это поможет вам принять более обоснованное решение.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
