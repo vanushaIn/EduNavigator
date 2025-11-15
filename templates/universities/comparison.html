@@ -1,100 +1,496 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
 
 {% block title %}Сравнение университетов - Агрегатор ВУЗов РФ{% endblock %}
+
+{% block extra_css %}
+<style>
+    .university-select-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 3px solid transparent;
+        position: relative;
+    }
+    
+    .university-select-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .university-select-card.selected {
+        border-color: var(--blue-600);
+        background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+        box-shadow: 0 4px 15px rgba(29, 138, 254, 0.3);
+    }
+    
+    .university-select-card .check-icon {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 30px;
+        height: 30px;
+        background: var(--blue-600);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        font-size: 0.9rem;
+    }
+    
+    .university-select-card.selected .check-icon {
+        opacity: 1;
+    }
+    
+    .selected-counter {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-700) 100%);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 50px;
+        box-shadow: 0 6px 20px rgba(29, 138, 254, 0.4);
+        z-index: 1000;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    
+    .filter-section {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: var(--card-shadow);
+        border: 2px solid var(--gray-200);
+        margin-bottom: 25px;
+    }
+    
+    .university-checkbox {
+        display: none;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="row">
         <div class="col-12">
-            <h1 class="mb-4">
+            <h1 class="mb-3">
                 <i class="fas fa-balance-scale me-2"></i>Сравнение университетов
             </h1>
             <p class="text-muted mb-4">
-                Выберите до 5 университетов для детального сравнения по различным параметрам
+                Выберите от 2 до 5 университетов для детального сравнения. Используйте фильтры для быстрого поиска.
             </p>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-4">
-                            <label class="form-label">
-                                <i class="fas fa-university me-2"></i>Выберите университеты для сравнения
-                            </label>
-                            <div class="row">
-                                {% for university in form.universities %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        {{ university.tag }}
-                                        <label class="form-check-label" for="{{ university.id_for_label }}">
-                                            {{ university.choice_label }}
-                                        </label>
-                                    </div>
+    <!-- Фильтры -->
+    <div class="filter-section">
+        <h5 class="mb-3">
+            <i class="fas fa-filter me-2"></i>Фильтры поиска
+        </h5>
+        <form method="get" id="filterForm" class="row g-3">
+            <div class="col-md-3">
+                <label for="{{ search_form.name.id_for_label }}" class="form-label">{{ search_form.name.label }}</label>
+                {{ search_form.name }}
+            </div>
+            <div class="col-md-2">
+                <label for="{{ search_form.region.id_for_label }}" class="form-label">{{ search_form.region.label }}</label>
+                {{ search_form.region }}
+            </div>
+            <div class="col-md-2">
+                <label for="{{ search_form.city.id_for_label }}" class="form-label">{{ search_form.city.label }}</label>
+                {{ search_form.city }}
+                <datalist id="cities-list">
+                    {% for city in cities %}
+                        <option value="{{ city }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+            <div class="col-md-2">
+                <label for="{{ search_form.university_type.id_for_label }}" class="form-label">{{ search_form.university_type.label }}</label>
+                {{ search_form.university_type }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>Поиск
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <a href="{% url 'universities:comparison' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-redo"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="form-check">
+                    {{ search_form.is_public }}
+                    <label class="form-check-label" for="{{ search_form.is_public.id_for_label }}">
+                        {{ search_form.is_public.label }}
+                    </label>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Форма выбора университетов -->
+    <form method="post" id="comparisonForm">
+        {% csrf_token %}
+        
+        <!-- Счетчик выбранных -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Выбрано университетов:</strong> <span id="selectedCount">{{ selected_count }}</span> из 5
+                    </div>
+                    <div>
+                        {% if selected_count >= 2 %}
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-balance-scale me-2"></i>Сравнить выбранные
+                            </button>
+                        {% else %}
+                            <button type="submit" class="btn btn-primary btn-lg" disabled>
+                                <i class="fas fa-balance-scale me-2"></i>Выберите минимум 2 университета
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Список университетов -->
+        <div class="row">
+            {% for university in universities %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card university-select-card h-100 {% if university.id in selected_ids %}selected{% endif %}" 
+                     data-university-id="{{ university.id }}">
+                    <div class="check-icon">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-start mb-3">
+                            {% if "медицинский" in university.name.lower or "медицин" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-medical">
+                                    <i class="fas fa-user-md"></i>
                                 </div>
-                                {% endfor %}
+                            {% elif "технический" in university.name.lower or "политехнический" in university.name.lower or "технологический" in university.name.lower or "технологии" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-technical">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                            {% elif "педагогический" in university.name.lower or "педагог" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-pedagogical">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                </div>
+                            {% elif "экономический" in university.name.lower or "экономик" in university.name.lower or "финанс" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-economic">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            {% elif "аграрный" in university.name.lower or "сельскохозяйствен" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-agricultural">
+                                    <i class="fas fa-seedling"></i>
+                                </div>
+                            {% elif "военный" in university.name.lower or "военн" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-military">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                            {% elif "художественный" in university.name.lower or "культур" in university.name.lower or "дизайн" in university.name.lower or "искусств" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-artistic">
+                                    <i class="fas fa-palette"></i>
+                                </div>
+                            {% elif "консерватория" in university.name.lower or "музык" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-music">
+                                    <i class="fas fa-music"></i>
+                                </div>
+                            {% elif "строительн" in university.name.lower or "архитектур" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-technical">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                            {% elif "транспорт" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-technical">
+                                    <i class="fas fa-train"></i>
+                                </div>
+                            {% elif "гуманитарн" in university.name.lower %}
+                                <div class="university-icon-wrapper me-3 icon-artistic">
+                                    <i class="fas fa-book-reader"></i>
+                                </div>
+                            {% else %}
+                                <div class="university-icon-wrapper me-3 icon-default">
+                                    <i class="fas fa-university"></i>
+                                </div>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <h5 class="card-title mb-1">{{ university.short_name }}</h5>
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>{{ university.city }}, {{ university.region.name }}
+                                </small>
                             </div>
-                            {% if form.universities.errors %}
-                                <div class="text-danger">{{ form.universities.errors }}</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <span class="badge bg-{% if university.is_public %}success{% else %}warning{% endif %} me-2">
+                                {% if university.is_public %}Государственный{% else %}Частный{% endif %}
+                            </span>
+                            <span class="badge bg-secondary me-2">{{ university.university_type.name }}</span>
+                            {% if university.programs_count %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-graduation-cap me-1"></i>{{ university.programs_count }} программ
+                                </span>
                             {% endif %}
                         </div>
                         
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'universities:university_list' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Назад к списку
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-balance-scale me-2"></i>Сравнить университеты
-                            </button>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="rating-stars">
+                                {% if university.avg_rating %}
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= university.avg_rating %}
+                                            <i class="fas fa-star text-warning"></i>
+                                        {% else %}
+                                            <i class="far fa-star text-muted"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <span class="ms-2">{{ university.avg_rating|floatformat:1 }}</span>
+                                    <small class="text-muted">({{ university.ratings_count }})</small>
+                                {% else %}
+                                    <span class="text-muted">Нет оценок</span>
+                                {% endif %}
+                            </div>
                         </div>
-                    </form>
+                        
+                        <input type="checkbox" 
+                               name="selected_universities" 
+                               value="{{ university.id }}" 
+                               class="university-checkbox"
+                               {% if university.id in selected_ids %}checked{% endif %}>
+                    </div>
                 </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h4>Университеты не найдены</h4>
+                        <p class="text-muted">Попробуйте изменить параметры фильтрации</p>
+                        <a href="{% url 'universities:comparison' %}" class="btn btn-primary">
+                            <i class="fas fa-redo me-2"></i>Сбросить фильтры
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if universities %}
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                {% if selected_count >= 2 %}
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-balance-scale me-2"></i>Сравнить выбранные университеты
+                    </button>
+                {% else %}
+                    <button type="submit" class="btn btn-primary btn-lg" disabled>
+                        <i class="fas fa-balance-scale me-2"></i>Выберите минимум 2 университета для сравнения
+                    </button>
+                {% endif %}
+                <a href="{% url 'universities:university_list' %}" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="fas fa-arrow-left me-2"></i>Назад к списку
+                </a>
             </div>
         </div>
         
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="fas fa-info-circle me-2"></i>Как работает сравнение
-                    </h5>
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Выберите от 2 до 5 университетов
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Сравните по рейтингам и отзывам
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Изучите программы обучения
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Сравните контактную информацию
-                        </li>
+        <!-- Пагинация -->
+        {% if page_obj.has_other_pages %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <nav aria-label="Навигация по страницам">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
                     </ul>
-                </div>
-            </div>
-            
-            <div class="card mt-3">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="fas fa-lightbulb me-2"></i>Советы
-                    </h5>
-                    <p class="card-text">
-                        Для лучшего сравнения выбирайте университеты одного типа или региона.
-                        Это поможет вам принять более обоснованное решение.
-                    </p>
-                </div>
+                </nav>
             </div>
         </div>
-    </div>
+        {% endif %}
+        {% endif %}
+    </form>
 </div>
+
+<!-- Счетчик выбранных (плавающий) -->
+{% if selected_count > 0 %}
+<div class="selected-counter" id="floatingCounter">
+    <i class="fas fa-check-circle me-2"></i>
+    Выбрано: <span id="floatingCount">{{ selected_count }}</span>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.university-select-card');
+    const checkboxes = document.querySelectorAll('.university-checkbox');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const floatingCounter = document.getElementById('floatingCounter');
+    const floatingCountSpan = document.getElementById('floatingCount');
+    const maxSelection = 5;
+    
+    // Сохраняем выбранные в localStorage при изменении
+    function saveSelection() {
+        const selected = Array.from(document.querySelectorAll('.university-checkbox:checked'))
+            .map(cb => cb.value);
+        localStorage.setItem('selectedUniversities', JSON.stringify(selected));
+    }
+    
+    function updateCounter() {
+        const selected = document.querySelectorAll('.university-checkbox:checked').length;
+        if (selectedCountSpan) {
+            selectedCountSpan.textContent = selected;
+        }
+        if (floatingCountSpan) {
+            floatingCountSpan.textContent = selected;
+        }
+        
+        // Показываем/скрываем плавающий счетчик
+        if (selected > 0) {
+            if (!floatingCounter) {
+                const counter = document.createElement('div');
+                counter.className = 'selected-counter';
+                counter.id = 'floatingCounter';
+                counter.innerHTML = '<i class="fas fa-check-circle me-2"></i>Выбрано: <span id="floatingCount">' + selected + '</span>';
+                document.body.appendChild(counter);
+            }
+        } else {
+            if (floatingCounter) {
+                floatingCounter.remove();
+            }
+        }
+        
+        // Обновляем состояние кнопки
+        const submitButtons = document.querySelectorAll('button[type="submit"]');
+        submitButtons.forEach(btn => {
+            if (selected >= 2 && selected <= maxSelection) {
+                btn.disabled = false;
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.disabled = true;
+            }
+        });
+        
+        // Сохраняем выбор
+        saveSelection();
+    }
+    
+    cards.forEach(card => {
+        card.addEventListener('click', function(e) {
+            // Не переключаем, если кликнули на ссылку или кнопку
+            if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('a') || e.target.closest('button')) {
+                return;
+            }
+            
+            const checkbox = card.querySelector('.university-checkbox');
+            const selected = document.querySelectorAll('.university-checkbox:checked').length;
+            
+            if (checkbox.checked) {
+                // Снимаем выбор
+                checkbox.checked = false;
+                card.classList.remove('selected');
+            } else {
+                // Проверяем лимит
+                if (selected >= maxSelection) {
+                    alert('Можно выбрать максимум ' + maxSelection + ' университетов для сравнения.');
+                    return;
+                }
+                checkbox.checked = true;
+                card.classList.add('selected');
+            }
+            
+            updateCounter();
+        });
+    });
+    
+    // Обновляем сохранение при изменении выбора
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            saveSelection();
+        });
+    });
+    
+    // Инициализация счетчика
+    updateCounter();
+    
+    // Восстанавливаем выбранные из localStorage при загрузке страницы
+    const saved = localStorage.getItem('selectedUniversities');
+    if (saved) {
+        try {
+            const selectedIds = JSON.parse(saved);
+            selectedIds.forEach(id => {
+                const checkbox = document.querySelector(`.university-checkbox[value="${id}"]`);
+                if (checkbox && !checkbox.checked) {
+                    checkbox.checked = true;
+                    const card = checkbox.closest('.university-select-card');
+                    if (card) {
+                        card.classList.add('selected');
+                    }
+                }
+            });
+            updateCounter();
+        } catch (e) {
+            console.error('Ошибка при восстановлении выбранных:', e);
+        }
+    }
+    
+    // Очищаем localStorage при успешной отправке формы
+    const comparisonForm = document.getElementById('comparisonForm');
+    if (comparisonForm) {
+        comparisonForm.addEventListener('submit', function() {
+            localStorage.removeItem('selectedUniversities');
+        });
+    }
+});
+</script>
 {% endblock %}

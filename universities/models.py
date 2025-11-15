@@ -46,6 +46,15 @@ class University(models.Model):
     is_public = models.BooleanField(default=True, verbose_name="Государственный")
     accreditation = models.CharField(max_length=100, blank=True, verbose_name="Аккредитация")
     license = models.CharField(max_length=100, blank=True, verbose_name="Лицензия")
+    yandex_rating = models.FloatField(blank=True, null=True, verbose_name="Рейтинг Яндекс Карт")
+    yandex_reviews_count = models.IntegerField(default=0, verbose_name="Количество отзывов в Яндекс Картах")
+    yandex_place_id = models.CharField(max_length=200, blank=True, verbose_name="ID места в Яндекс Картах")
+    google_rating = models.FloatField(blank=True, null=True, verbose_name="Рейтинг Google")
+    google_reviews_count = models.IntegerField(default=0, verbose_name="Количество отзывов в Google")
+    google_place_id = models.CharField(max_length=200, blank=True, verbose_name="ID места в Google")
+    tabiturient_rating = models.FloatField(blank=True, null=True, verbose_name="Рейтинг Табитуриент.ру")
+    tabiturient_rank = models.IntegerField(blank=True, null=True, verbose_name="Место в рейтинге Табитуриент.ру")
+    tabiturient_category = models.CharField(max_length=10, blank=True, verbose_name="Категория рейтинга (A+, A, B, etc.)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -153,3 +162,24 @@ class News(models.Model):
     
     def __str__(self):
         return self.title
+
+
+class UniversityRepresentative(models.Model):
+    """Представитель университета"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='university_representatives', verbose_name="Пользователь")
+    university = models.ForeignKey(University, on_delete=models.CASCADE, related_name='representatives', verbose_name="Университет")
+    is_approved = models.BooleanField(default=False, verbose_name="Одобрено администратором")
+    position = models.CharField(max_length=100, blank=True, verbose_name="Должность")
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Контактный телефон")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    
+    class Meta:
+        verbose_name = "Представитель университета"
+        verbose_name_plural = "Представители университетов"
+        unique_together = ['user', 'university']
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        status = "одобрен" if self.is_approved else "ожидает одобрения"
+        return f"{self.user.get_full_name() or self.user.username} - {self.university.name} ({status})"

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои представительства - Агрегатор ВУЗов РФ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-user-tie me-2"></i>Мои представительства
+                </h2>
+                <a href="{% url 'universities:become_representative' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Подать запрос на представительство
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    {% if representatives %}
+        <div class="row">
+            {% for representative in representatives %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title mb-0">
+                                    <a href="{% url 'universities:university_detail' representative.university.id %}" 
+                                       class="text-decoration-none">
+                                        {{ representative.university.name }}
+                                    </a>
+                                </h5>
+                                {% if representative.is_approved %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Одобрено
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-clock me-1"></i>Ожидает одобрения
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <p class="text-muted mb-2">
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                {{ representative.university.city }}, {{ representative.university.region.name }}
+                            </p>
+                            
+                            {% if representative.position %}
+                                <p class="mb-2">
+                                    <i class="fas fa-briefcase me-2"></i>
+                                    <strong>Должность:</strong> {{ representative.position }}
+                                </p>
+                            {% endif %}
+                            
+                            {% if representative.phone %}
+                                <p class="mb-2">
+                                    <i class="fas fa-phone me-2"></i>
+                                    <strong>Телефон:</strong> {{ representative.phone }}
+                                </p>
+                            {% endif %}
+                            
+                            <p class="text-muted small mb-3">
+                                <i class="fas fa-calendar me-1"></i>
+                                Запрос отправлен: {{ representative.created_at|date:"d.m.Y H:i" }}
+                            </p>
+                            
+                            {% if representative.is_approved %}
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'universities:edit_university' representative.university.id %}" 
+                                       class="btn btn-success">
+                                        <i class="fas fa-edit me-2"></i>Редактировать информацию о вузе
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Ваш запрос ожидает одобрения администратором. 
+                                    После одобрения вы сможете редактировать информацию о вузе.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-user-tie fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">У вас пока нет представительств</h4>
+                        <p class="text-muted mb-4">
+                            Подайте запрос на получение статуса представителя вуза, 
+                            чтобы получить возможность редактировать информацию о вузе.
+                        </p>
+                        <a href="{% url 'universities:become_representative' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Подать запрос на представительство
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+

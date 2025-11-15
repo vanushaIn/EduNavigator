@@ -2,10 +2,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Avg, Count
+from django.db.models import Q, Avg, Count, Min
 from django.http import JsonResponse
-from .models import University, UniversityRating, UniversityComparison, Region, UniversityType, News, Faculty, Program
-from .forms import UniversitySearchForm, UniversityRatingForm, UniversityComparisonForm, NewsForm
+from .models import University, UniversityRating, UniversityComparison, Region, UniversityType, News, Faculty, Program, UniversityRepresentative
+from .forms import UniversitySearchForm, UniversityRatingForm, UniversityComparisonForm, NewsForm, UniversityEditForm, BecomeRepresentativeForm
 from accounts.models import FavoriteUniversity
 
 
@@ -43,38 +43,64 @@ def university_list_view(request):
     if form.is_valid():
         name = form.cleaned_data.get('name')
         region = form.cleaned_data.get('region')
+        city = form.cleaned_data.get('city')
         university_type = form.cleaned_data.get('university_type')
         is_public = form.cleaned_data.get('is_public')
-        min_rating = form.cleaned_data.get('min_rating')
+        min_programs = form.cleaned_data.get('min_programs')
+        max_tuition = form.cleaned_data.get('max_tuition')
         
+        # Базовые фильтры
         if name:
             universities = universities.filter(name__icontains=name)
         if region:
             universities = universities.filter(region=region)
+        if city:
+            universities = universities.filter(city__icontains=city)
         if university_type:
             universities = universities.filter(university_type=university_type)
-        if is_public:
+        if is_public is not None and is_public:
             universities = universities.filter(is_public=True)
-        if min_rating:
-            universities = universities.annotate(
-                avg_rating=Avg('ratings__rating')
-            ).filter(avg_rating__gte=min_rating)
     
-    # Добавляем средний рейтинг
+    # Добавляем аннотации для всех нужных полей
     universities = universities.annotate(
         avg_rating=Avg('ratings__rating'),
-        ratings_count=Count('ratings')
-    ).order_by('-avg_rating', 'name')
+        ratings_count=Count('ratings'),
+        programs_count=Count('faculties__programs', distinct=True),
+        min_tuition_fee=Min('faculties__programs__tuition_fee')
+    )
+    
+    # Фильтрация по аннотированным полям
+    if form.is_valid():
+        min_rating = form.cleaned_data.get('min_rating')
+        min_programs = form.cleaned_data.get('min_programs')
+        max_tuition = form.cleaned_data.get('max_tuition')
+        
+        if min_rating:
+            universities = universities.filter(avg_rating__gte=min_rating)
+        if min_programs:
+            universities = universities.filter(programs_count__gte=min_programs)
+        if max_tuition:
+            # Фильтруем по минимальной стоимости обучения среди программ
+            universities = universities.filter(
+                Q(min_tuition_fee__lte=max_tuition) | Q(min_tuition_fee__isnull=True)
+            )
+    
+    # Сортировка: сначала по рейтингу, потом по количеству программ, затем по названию
+    universities = universities.order_by('-avg_rating', '-programs_count', 'name')
     
     # Пагинация
     paginator = Paginator(universities, 12)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Получаем уникальные города для автодополнения
+    cities = University.objects.values_list('city', flat=True).distinct().order_by('city')
+    
     context = {
         'form': form,
         'page_obj': page_obj,
         'universities': page_obj,
+        'cities': cities,
     }
     return render(request, 'universities/university_list.html', context)
 
@@ -107,6 +133,9 @@ def university_detail_view(request, university_id):
     # Новости университета
     news = News.objects.filter(university=university, is_published=True).order_by('-created_at')[:5]
     
+    # Проверяем, является ли пользователь представителем
+    is_representative = is_university_representative(request.user, university)
+    
     context = {
         'university': university,
         'is_favorite': is_favorite,
@@ -115,6 +144,7 @@ def university_detail_view(request, university_id):
         'faculties': faculties,
         'programs': programs,
         'news': news,
+        'is_representative': is_representative,
     }
     return render(request, 'universities/university_detail.html', context)
 
@@ -152,17 +182,73 @@ def rate_university_view(request, university_id):
 
 def comparison_view(request):
     """Сравнение университетов"""
-    if request.method == 'POST':
-        form = UniversityComparisonForm(request.POST)
-        if form.is_valid():
-            universities = form.cleaned_data['universities']
-            # Создаем URL для сравнения с параметрами
-            university_ids = ','.join(str(u.id) for u in universities)
-            return redirect('universities:compare_universities', university_ids=university_ids)
-    else:
-        form = UniversityComparisonForm()
+    # Получаем фильтры из GET запроса
+    search_form = UniversitySearchForm(request.GET)
+    universities = University.objects.all()
     
-    return render(request, 'universities/comparison.html', {'form': form})
+    # Применяем фильтры
+    if search_form.is_valid():
+        name = search_form.cleaned_data.get('name')
+        region = search_form.cleaned_data.get('region')
+        city = search_form.cleaned_data.get('city')
+        university_type = search_form.cleaned_data.get('university_type')
+        is_public = search_form.cleaned_data.get('is_public')
+        
+        if name:
+            universities = universities.filter(name__icontains=name)
+        if region:
+            universities = universities.filter(region=region)
+        if city:
+            universities = universities.filter(city__icontains=city)
+        if university_type:
+            universities = universities.filter(university_type=university_type)
+        if is_public is not None and is_public:
+            universities = universities.filter(is_public=True)
+    
+    # Добавляем аннотации
+    universities = universities.annotate(
+        avg_rating=Avg('ratings__rating'),
+        ratings_count=Count('ratings'),
+        programs_count=Count('faculties__programs', distinct=True)
+    ).order_by('name')
+    
+    # Пагинация
+    paginator = Paginator(universities, 24)  # 24 университета на странице
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Обработка POST запроса для сравнения
+    selected_ids = []
+    if request.method == 'POST':
+        selected_ids_str = request.POST.getlist('selected_universities')
+        if selected_ids_str:
+            try:
+                selected_ids = [int(id) for id in selected_ids_str]
+                if len(selected_ids) < 2:
+                    messages.error(request, 'Выберите минимум 2 университета для сравнения.')
+                elif len(selected_ids) > 5:
+                    messages.error(request, 'Можно выбрать максимум 5 университетов для сравнения.')
+                else:
+                    university_ids = ','.join(str(id) for id in selected_ids)
+                    return redirect('universities:compare_universities', university_ids=university_ids)
+            except ValueError:
+                messages.error(request, 'Ошибка в выбранных университетах.')
+    
+    # Получаем уникальные города для автодополнения
+    cities = University.objects.values_list('city', flat=True).distinct().order_by('city')
+    
+    # Преобразуем selected_ids в set для быстрой проверки
+    selected_ids_set = set(selected_ids)
+    
+    context = {
+        'universities': page_obj,
+        'page_obj': page_obj,
+        'search_form': search_form,
+        'selected_ids': selected_ids_set,
+        'cities': cities,
+        'selected_count': len(selected_ids),
+    }
+    return render(request, 'universities/comparison.html', context)
 
 
 def compare_universities_view(request, university_ids):
@@ -265,3 +351,98 @@ def news_detail_view(request, news_id):
         'news': news,
     }
     return render(request, 'universities/news_detail.html', context)
+
+
+def is_university_representative(user, university):
+    """Проверяет, является ли пользователь одобренным представителем университета"""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or user.is_staff:
+        return True
+    return UniversityRepresentative.objects.filter(
+        user=user,
+        university=university,
+        is_approved=True
+    ).exists()
+
+
+@login_required
+def become_representative_view(request):
+    """Запрос на получение статуса представителя университета"""
+    if request.method == 'POST':
+        form = BecomeRepresentativeForm(request.POST)
+        if form.is_valid():
+            # Проверяем, не существует ли уже запрос для этого пользователя и университета
+            university = form.cleaned_data['university']
+            existing = UniversityRepresentative.objects.filter(
+                user=request.user,
+                university=university
+            ).first()
+            
+            if existing:
+                if existing.is_approved:
+                    messages.info(request, f'Вы уже являетесь одобренным представителем {university.name}')
+                    return redirect('universities:my_representatives')
+                else:
+                    messages.info(request, f'Ваш запрос на представительство {university.name} уже отправлен и ожидает одобрения администратора')
+                    return redirect('universities:my_representatives')
+            
+            representative = form.save(commit=False)
+            representative.user = request.user
+            representative.is_approved = False  # Требуется одобрение админа
+            representative.save()
+            
+            messages.success(
+                request,
+                f'Ваш запрос на представительство {university.name} отправлен. '
+                'После одобрения администратором вы сможете редактировать информацию о вузе.'
+            )
+            return redirect('universities:my_representatives')
+    else:
+        form = BecomeRepresentativeForm()
+    
+    context = {
+        'form': form,
+    }
+    return render(request, 'universities/become_representative.html', context)
+
+
+@login_required
+def my_representatives_view(request):
+    """Список представительств пользователя"""
+    representatives = UniversityRepresentative.objects.filter(user=request.user).order_by('-created_at')
+    
+    context = {
+        'representatives': representatives,
+    }
+    return render(request, 'universities/my_representatives.html', context)
+
+
+@login_required
+def edit_university_view(request, university_id):
+    """Редактирование информации о вузе (только для одобренных представителей)"""
+    university = get_object_or_404(University, id=university_id)
+    
+    # Проверяем права доступа
+    if not is_university_representative(request.user, university):
+        messages.error(
+            request,
+            'У вас нет прав для редактирования информации об этом университете. '
+            'Подайте запрос на получение статуса представителя.'
+        )
+        return redirect('universities:university_detail', university_id=university_id)
+    
+    if request.method == 'POST':
+        form = UniversityEditForm(request.POST, request.FILES, instance=university)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Информация о вузе успешно обновлена!')
+            return redirect('universities:university_detail', university_id=university_id)
+    else:
+        form = UniversityEditForm(instance=university)
+    
+    context = {
+        'form': form,
+        'university': university,
+    }
+    return render(request, 'universities/edit_university.html', context)

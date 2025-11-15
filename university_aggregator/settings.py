@@ -134,3 +134,11 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'universities:home'
 LOGOUT_REDIRECT_URL = 'universities:home'
+
+# Яндекс Карты API
+YANDEX_MAPS_API_KEY = config('YANDEX_MAPS_API_KEY', default='')
+
+# Google Places API
+# По умолчанию используется ключ из примера (только для разработки!)
+# В продакшене обязательно используйте свой ключ через .env файл
+GOOGLE_PLACES_API_KEY = config('GOOGLE_PLACES_API_KEY', default='AIzaSyD0id0CM0wW4HsX_DcLBV6g3moc_E0g7w4')

@@ -56,7 +56,6 @@
                     </div>
                     
                     <div class="mb-3">
-                        <p><strong>Основан:</strong> {{ university.founded_year }} год</p>
                         <p><strong>Адрес:</strong> {{ university.address }}</p>
                         {% if university.website %}
                             <p><strong>Сайт:</strong> 
@@ -134,12 +133,6 @@
                                     {% if university.is_public %}Государственный{% else %}Частный{% endif %}
                                 </span>
                             </td>
-                            {% endfor %}
-                        </tr>
-                        <tr>
-                            <td><strong>Год основания</strong></td>
-                            {% for university in universities %}
-                            <td>{{ university.founded_year }}</td>
                             {% endfor %}
                         </tr>
                         <tr>

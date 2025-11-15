@@ -29,19 +29,15 @@
                                     {% if university.is_public %}Государственный{% else %}Частный{% endif %}
                                 </span>
                                 <span class="badge bg-secondary me-2">{{ university.university_type.name }}</span>
-                                <span class="badge bg-info">{{ university.founded_year }} год</span>
                             </div>
                             
                             <p class="mb-2">
                                 <i class="fas fa-map-marker-alt me-2"></i>
                                 {{ university.city }}, {{ university.region.name }}
                             </p>
-                            <p class="mb-2">
-                                <i class="fas fa-calendar me-2"></i>
-                                Основан в {{ university.founded_year }} году
-                            </p>
                         </div>
                         <div class="col-md-3 text-md-end">
+                            <!-- Рейтинг сайта -->
                             <div class="rating-stars mb-3">
                                 {% if rating_stats.avg_rating %}
                                     <div class="text-center">
@@ -67,7 +63,75 @@
                                 {% endif %}
                             </div>
                             
+                            <!-- Рейтинг Яндекс Карт -->
+                            {% if university.yandex_rating %}
+                            <div class="rating-stars mb-3">
+                                <div class="text-center">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #FC3F1D;">
+                                        <i class="fab fa-yandex me-1"></i>{{ university.yandex_rating|floatformat:1 }}
+                                    </div>
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= university.yandex_rating %}
+                                            <i class="fas fa-star" style="color: #FC3F1D;"></i>
+                                        {% else %}
+                                            <i class="far fa-star" style="color: #FC3F1D;"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <div class="text-muted" style="font-size: 0.85rem;">
+                                        Яндекс Карты: {{ university.yandex_reviews_count }} отзывов
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Рейтинг Google -->
+                            {% if university.google_rating %}
+                            <div class="rating-stars mb-3">
+                                <div class="text-center">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #4285F4;">
+                                        <i class="fab fa-google me-1"></i>{{ university.google_rating|floatformat:1 }}
+                                    </div>
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= university.google_rating %}
+                                            <i class="fas fa-star" style="color: #FBBC04;"></i>
+                                        {% else %}
+                                            <i class="far fa-star" style="color: #DBDBDB;"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <div class="text-muted" style="font-size: 0.85rem;">
+                                        Google: {{ university.google_reviews_count }} отзывов
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Рейтинг Табитуриент.ру -->
+                            {% if university.tabiturient_rating %}
+                            <div class="rating-stars mb-3">
+                                <div class="text-center">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #28a745;">
+                                        <i class="fas fa-graduation-cap me-1"></i>{{ university.tabiturient_rating|floatformat:2 }}
+                                    </div>
+                                    <div class="text-muted" style="font-size: 0.85rem;">
+                                        Табитуриент.ру
+                                        {% if university.tabiturient_rank %}
+                                            <br>Место в рейтинге: {{ university.tabiturient_rank }}
+                                        {% endif %}
+                                        {% if university.tabiturient_category %}
+                                            <br>Категория: <span class="badge bg-success">{{ university.tabiturient_category }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
                             <div class="d-grid gap-2">
+                                {% if is_representative %}
+                                    <a href="{% url 'universities:edit_university' university.id %}" 
+                                       class="btn btn-success">
+                                        <i class="fas fa-edit me-2"></i>Редактировать информацию
+                                    </a>
+                                {% endif %}
                                 {% if user.is_authenticated %}
                                     {% if is_favorite %}
                                         <a href="{% url 'accounts:remove_from_favorites' university.id %}" 
