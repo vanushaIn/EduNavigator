@@ -46,6 +46,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# WhiteNoise для статических файлов (опционально, только если установлен)
+try:
+    import whitenoise
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+except ImportError:
+    pass
+
 ROOT_URLCONF = 'university_aggregator.urls'
 
 TEMPLATES = [
@@ -117,6 +124,13 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# WhiteNoise для статических файлов в production (опционально)
+try:
+    import whitenoise
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+except ImportError:
+    pass
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
